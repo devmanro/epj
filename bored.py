@@ -40,9 +40,11 @@ def format_entry_docx(doc, row):
     client = str(row.get("client", "")).strip()
     commodity = str(row.get("type", "")).strip() or "Units+ packages"
     nb_colis = row.get("qte", "")
+    nb_colis = int(nb_colis)
     tonnage = row.get("poids", "")
     
-    nb_str = str(nb_colis)
+    #nb_str = str(nb_colis)
+    nb_str = f"{nb_colis:02d}"
     tonnage_str = str(tonnage)
     
     # Optionally, we can wrap all lines inside a single text frame or a table cell to better control vertical centering.
