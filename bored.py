@@ -7,16 +7,20 @@ from docx.enum.table import WD_TABLE_ALIGNMENT
 def format_entry_docx(doc, row):
     client = str(row.get("client", "")).strip()
     commodity = str(row.get("type", "")).strip() or "Units + Package"
-    nb_colis = row.get("qte", "") or 00
-    tonnage = row.get("poids", "") or 00
-    rec_qty = row.get("rec_qty", "") or 00
+    nb_colis = row.get("qte") or 00
+    tonnage = row.get("poids") or 0.0
+    rec_qty = row.get("rec_qty") or 00
+    
+    # tonnage_str = f"{ tonnage:06.2f}"
+    # tonnage_str = f"{  tonnage}"
+    tonnage_str = f"{tonnage:.2f}".lstrip("0") if tonnage < 1 else f"{tonnage:.2f}"
 
-    # manifest_qty_str = str(nb_colis)
-    tonnage_str = str(tonnage)
     manifest_qty_str = f"{int(nb_colis):02d}"
-    rec_str = f"{int(rec_qty):02d}" 
+    rec_str = f"{int(rec_qty):02d}"
     damaged_str=str("00")
 
+    # tonnage_str = str(tonnage)
+    # manifest_qty_str = str(nb_colis)
     # create table with 2 columns for labels/values, style similar to your image
     table = doc.add_table(rows=5, cols=2)
     
