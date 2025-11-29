@@ -1,153 +1,115 @@
 import pandas as pd
 from docx import Document
-from docx.shared import Pt,Inches
-from docx.enum.text import WD_ALIGN_PARAGRAPH,WD_TAB_ALIGNMENT
-
-def add_bold_except_value(p, left_label, left_value, right_label, right_value):
-    """
-    In `paragraph`, add runs so that:
-    - left_label is bold, left_value is not bold
-    - right_label is bold, right_value is not bold
-    And put left part first, then some spacing, then right part.
-    """
-
-    
-
-    # Add left
-    run1 = p.add_run(left_label)
-    run1.bold = True
-    run2 = p.add_run(left_value)
-    run2.bold = False
-    
-    
-    # Add spacing (you may adjust number of spaces or use tab)
-    # Use tab character to try pushing the right side to the right
-
-    p.add_run("                                       ")
-
-    # Add right
-    run3 = p.add_run(right_label)
-    run3.bold = True
-    run4 = p.add_run(right_value)
-    run4.bold = False
-
-    
+from docx.shared import Pt, Inches , Cm
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_TABLE_ALIGNMENT
 
 def format_entry_docx(doc, row):
-    """
-    Given a Document and a row, add the entry block.
-    """
     client = str(row.get("client", "")).strip()
-    commodity = str(row.get("type", "")).strip() or "Units+ packages"
-    nb_colis = row.get("qte", "")
-    nb_colis = int(nb_colis)
-    tonnage = row.get("poids", "")
-    
-    #nb_str = str(nb_colis)
-    nb_str = f"{nb_colis:02d}"
+    commodity = str(row.get("type", "")).strip() or "Units + Package"
+    nb_colis = row.get("qte", "") or 00
+    tonnage = row.get("poids", "") or 00
+    rec_qty = row.get("rec_qty", "") or 00
+
+    # manifest_qty_str = str(nb_colis)
     tonnage_str = str(tonnage)
-    
-    # Optionally, we can wrap all lines inside a single text frame or a table cell to better control vertical centering.
-    # Here we just add paragraphs.
-        
-    # Top border line
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = p.add_run("=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=")
-    run.bold = True  # border line in bold
-    
-    # Receiver / Commodity line
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    p.paragraph_format.line_spacing=1
-    p.paragraph_format.space_after=Pt(0)
-    p.paragraph_format.space_before=Pt(0)
+    manifest_qty_str = f"{int(nb_colis):02d}"
+    rec_str = f"{int(rec_qty):02d}" 
+    damaged_str=str("00")
 
-    add_bold_except_value(
-        p,
-        left_label="Receiver : ",
-        left_value=client + "    ",  # add some spacing if needed
-        right_label="Comodity : ",
-        right_value=commodity
+    # create table with 2 columns for labels/values, style similar to your image
+    table = doc.add_table(rows=5, cols=2)
+    
+    table.autofit = True
+    # optional: fix widths
+    # widths = (Inches(3), Inches(3))
+    # table.columns[0].width = Inches(1)  # adjust as needed
+    # table.columns[1].width = Inches(1)
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    # for row_cells in table.rows:
+    #     for idx, width in enumerate(widths):
+    #         row_cells.cells[idx].width = width
+
+    # for i, row in enumerate(table.rows):
+    #     row.cells[0].width = Cm(12)
+    #     row.cells[1].width = Cm(5)
+    # Row 0: Receiver / Commodity
+    row0 = table.rows[0].cells
+    row0[0].width = Cm(9)
+    row0[0].paragraphs[0].add_run("Receiver : ").bold = True
+    row0[0].paragraphs[0].add_run(client)
+    row0[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+    row0[1].width = Cm(9)
+    row0[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+    run=row0[1].paragraphs[0].add_run("Commodity : ")
+    run1=row0[1].paragraphs[0].add_run(commodity)
+    run.bold=True
+    run.font.name = "Agency FB"
+    run1.font.name = "Agency FB"
+
+
+    # Row 1: Manifested Quantity / Tonnage
+    row1 = table.rows[1].cells 
+    row1[0].width = Cm(12)
+    row1[0].paragraphs[0].add_run("Manifested Quantity : ").bold = True
+    row1[0].paragraphs[0].add_run(f"{manifest_qty_str} UNIT + PACKAGE")
+    row1[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+    row1[1].width = Cm(5)
+    row1[1].paragraphs[0].add_run("Tonnage : ").bold = True
+    row1[1].paragraphs[0].add_run(f"{tonnage_str} Mt")
+    row1[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+    # Row 2: Received / (right empty)
+    row2 = table.rows[2].cells
+    row2[0].width = Cm(30)
+    row2[0].paragraphs[0].add_run("Received:   ").bold = True
+    row2[0].paragraphs[0].add_run(f"    {damaged_str} Packaging damaged on board" ) 
+    row2[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+    # right cell left blank or you could merge if you like
+    # row2[1].width = Cm(12)
+    # row2[1].paragraphs[0].add_run(f"{damaged_str} Packaging damaged on board" ) 
+    # row2[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+    # Row 3: Total Received / (commodity)
+    row3 = table.rows[3].cells
+    row3[0].width = Cm(12)
+    row3[0].paragraphs[0].add_run("Total Received:  ").bold = True
+    row3[0].paragraphs[0].add_run(f"  {rec_str}")
+    row3[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+    # row3[0].paragraphs[0].add_run("")  # you could add value if needed
+
+    # row3[1].width = Cm(5)
+    # row3[1].paragraphs[0].add_run(rec_str)
+    # row3[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+    # Row 4: Final line (spanning both columns)
+    # simplest: write in left cell and span visually
+    row4 = table.rows[4].cells
+    row4[0].width = Cm(25)
+    full = row4[0].paragraphs[0].add_run(
+        "The Quantity Will Be confirmed after delivery Cargo."
     )
-    #l=len(p.text)
-    # Manifested Quantity / Tonnage line
+    full.bold = True
+    # optionally merge cells:
+    # table.rows[4].cells[0]._tc.merge(table.rows[4].cells[1]._tc)
 
-    
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    p.paragraph_format.line_spacing=1
-    p.paragraph_format.space_after=Pt(0)
-    p.paragraph_format.space_before=Pt(0)
+    # blank line after table
+    doc.add_paragraph()
 
-    add_bold_except_value(
-        p,
-        left_label="Manifested Quantity : ",
-        left_value=nb_str +"  "+ commodity + "                               ",
-        right_label="Tonnage : ",
-        right_value=tonnage_str + "  Mt"
-    )
-    
-    # Received line (only left side)
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    p.paragraph_format.line_spacing=1
-    p.paragraph_format.space_after=Pt(0)
-    p.paragraph_format.space_before=Pt(0)
-    run = p.add_run("Received                ")
-    run.bold = True
-    run2 = p.add_run("Packaging damaged on board.")
-    run2.bold = False
-    
-    
-    # Total Received line (left only)
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    p.paragraph_format.line_spacing=1
-    p.paragraph_format.space_after=Pt(0)
-    p.paragraph_format.space_before=Pt(0)
-
-    run = p.add_run("Total Received                                                             ")
-    run.bold = True
-    run2 = p.add_run(commodity)
-    run2.bold = False
-    
-    # Final confirmation line
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    p.paragraph_format.line_spacing=1
-    p.paragraph_format.space_after=Pt(0)
-    p.paragraph_format.space_before=Pt(0)
-
-    run = p.add_run("The Quantity Will Be confirmed after delivery Cargo.")
-    run.bold = True  # the label (which is the entire sentence) in your spec is bold
-    
-    
-
-
-def excel_to_docx_custom(input_excel, sheet_name=None,template_path="template.docx", output_docx="output.docx"):
-    # Ensure openpyxl is installed; pandas will need it
+def excel_to_docx_custom(input_excel, sheet_name=None, template_path=None, output_docx="output.docx"):
     df = pd.read_excel(input_excel, sheet_name=sheet_name, engine="openpyxl")
-    doc = Document(template_path)
-    
-    # Set default font for “Normal” style: Times New Roman, 12 pt
-    style = doc.styles["Normal"]
+    doc = Document(template_path) if template_path else Document()
 
+    style = doc.styles["Normal"]
     font = style.font
-    font.name = "Times New Roman"
+    font.name = "Calibri (Corps)"
     font.size = Pt(12)
-    doc.styles["Normal"].paragraph_format.alignment=WD_ALIGN_PARAGRAPH.JUSTIFY
-    
-    # Optionally: to vertically center the content on a page, you might add a top margin or insert blank paragraphs
-    # before and after. python-docx doesn’t have a built-in “vertical align center” setting for the page body.
-   
 
     for idx, row in df.iterrows():
         format_entry_docx(doc, row)
-        doc.add_paragraph("")  # blank line between entries
-    
+
     doc.save(output_docx)
     print(f"Saved {output_docx}")
 
 if __name__ == "__main__":
-    excel_to_docx_custom("Book1.xlsx", sheet_name=0,template_path="template.docx", output_docx="entries.docx")
+    excel_to_docx_custom("Book1.xlsx", sheet_name=0, template_path="template.docx", output_docx="entries.docx")
